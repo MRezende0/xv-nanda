@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Maria Fernanda | XV Anos",
     description:
       "Com muita alegria convido você para celebrar comigo os meus 15 anos, dia 06.11.2026 em Chos Malal.",
-    images: ["/convite-arte.jpg"],
+    images: ["/capa-v3.jpg"],
   },
 };
 

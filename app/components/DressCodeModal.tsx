@@ -33,13 +33,13 @@ export default function DressCodeModal({ open, onClose }: DressCodeModalProps) {
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="Traje"
+            aria-label="Guia de estilo"
             initial={{ opacity: 0, scale: 0.94, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
             onClick={(e) => e.stopPropagation()}
-            className="relative flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl bg-cream p-8 text-center shadow-2xl ring-1 ring-rose-soft/40"
+            className="relative flex max-h-[85vh] w-full max-w-sm flex-col items-center gap-5 overflow-y-auto rounded-2xl bg-cream p-8 text-center shadow-2xl ring-1 ring-rose-soft/40"
           >
             <button
               type="button"
@@ -56,11 +56,36 @@ export default function DressCodeModal({ open, onClose }: DressCodeModalProps) {
               <DressCodeIcon />
             </span>
 
-            <span className="font-script text-4xl text-rose-deep">Traje</span>
-            <p className="text-lg text-ink-deep">Esporte fino.</p>
-            <p className="text-sm text-ink">
-              Capriche, mas fique à vontade para dançar a noite toda!
-            </p>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[0.65rem] tracking-[0.3em] text-ink uppercase">
+                Guia de estilo
+              </span>
+              <span className="font-script text-4xl text-rose-deep">Traje social</span>
+            </div>
+
+            <div className="flex flex-col gap-4 text-left">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-[0.65rem] tracking-[0.3em] text-rose-deep uppercase">
+                  Para as convidadas
+                </h3>
+                <p className="text-sm text-ink-deep">
+                  Sugerimos vestidos midi ou longos de tecidos fluidos e elegantes,
+                  terninhos ou macacões de alfaiataria. Saltos ou sapatilhas
+                  sofisticadas complementam perfeitamente o look.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <h3 className="text-[0.65rem] tracking-[0.3em] text-rose-deep uppercase">
+                  Para os convidados
+                </h3>
+                <p className="text-sm text-ink-deep">
+                  Recomendamos calça social ou de alfaiataria, camisa social e
+                  blazer ou paletó. Sapato social é ideal. O uso de gravata é
+                  opcional.
+                </p>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}

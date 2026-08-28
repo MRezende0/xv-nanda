@@ -137,7 +137,7 @@ export default function RSVPModal({ open, onClose }: RSVPModalProps) {
               onClick={() => {
                 if (canSend) window.setTimeout(handleClose, 150);
               }}
-              className={`flex items-center justify-center gap-2 rounded-md px-6 py-3.5 text-sm font-semibold tracking-[0.15em] text-white uppercase transition-colors ${
+              className={`flex items-center justify-center gap-2 rounded-full px-6 py-3.5 font-serif text-lg tracking-wide text-white transition-colors ${
                 canSend ? "bg-rose-deep hover:bg-rose" : "pointer-events-none bg-rose-deep/40"
               }`}
             >

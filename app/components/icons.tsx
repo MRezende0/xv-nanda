@@ -21,6 +21,25 @@ export function CheckIcon() {
   );
 }
 
+export function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6 sm:h-7 sm:w-7" fill="none" aria-hidden="true">
+      <rect x="4" y="5.5" width="16" height="15" rx="2.4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4 10h16" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8.5 3.5v3.4M15.5 3.5v3.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6 sm:h-7 sm:w-7" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 7.6V12l3 2.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function DressCodeIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6 sm:h-7 sm:w-7" fill="none" aria-hidden="true">

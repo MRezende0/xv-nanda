@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --color-cream: #faf5ec;
+  --color-cream: #fcf6f5;
   --color-cream-deep: #f2e9d8;
-  --color-rose: #c0897f;
-  --color-rose-deep: #a96f66;
+  --color-rose: #d69d98;
+  --color-rose-deep: #c67570;
   --color-rose-soft: #e9c3bf;
   --color-sage: #93a578;
   --color-sage-deep: #718057;

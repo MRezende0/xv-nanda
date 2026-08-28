@@ -3,19 +3,37 @@
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import CircleAction from "./CircleAction";
 import Countdown from "./Countdown";
 import DressCodeModal from "./DressCodeModal";
 import EnvelopeCover from "./EnvelopeCover";
 import RSVPModal from "./RSVPModal";
-import Sprig from "./Sprig";
-import { CheckIcon, DressCodeIcon, LocationIcon } from "./icons";
+import {
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  DressCodeIcon,
+  LocationIcon,
+} from "./icons";
 
 const ADDRESS = "Av. Archimedes Manhães, 1007, Chos Malal";
 
 const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
   ADDRESS,
 )}`;
+
+const cardClass =
+  "flex flex-col items-center gap-2 rounded-2xl bg-white/60 p-5 text-center ring-1 ring-rose-soft/40";
+
+const cardIconClass =
+  "flex h-12 w-12 items-center justify-center rounded-full bg-rose-soft/40 text-rose-deep";
+
+const cardTitleClass = "text-[0.65rem] tracking-[0.3em] text-ink uppercase";
+
+const cardButtonClass =
+  "mt-1 rounded-full border border-rose/60 px-5 py-2 font-serif text-sm tracking-wide text-rose-deep transition-colors hover:bg-rose/10";
+
+const primaryButtonClass =
+  "flex w-full items-center justify-center gap-3 rounded-full bg-rose-deep px-8 py-4 font-serif text-lg tracking-wide text-white shadow-lg shadow-rose-deep/25 transition-colors hover:bg-rose active:scale-[0.98]";
 
 export default function InviteExperience() {
   const [opened, setOpened] = useState(false);
@@ -36,50 +54,102 @@ export default function InviteExperience() {
       </AnimatePresence>
 
       <motion.main
-        initial={{ opacity: 0, y: 16 }}
-        animate={opened ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
-        className="mx-auto flex w-full max-w-md flex-col items-center gap-14 px-6 pb-24 pt-14 sm:pt-20"
+        initial={{ opacity: 0 }}
+        animate={opened ? { opacity: 1 } : { opacity: 0 }}
+        transition={{ duration: 0.45, ease: "easeInOut" }}
+        className="mx-auto flex w-full max-w-md flex-col items-center gap-12 pb-24"
       >
-        <figure className="w-full overflow-hidden rounded-2xl shadow-xl shadow-ink-deep/10 ring-1 ring-rose-soft/50">
-          <Image
-            src="/convite-arte.jpg"
-            alt="Convite de aniversário de 15 anos de Maria Fernanda, com moldura floral, endereço em Chos Malal e data 06.11.2026"
-            width={1136}
-            height={1600}
-            priority
-            className="h-auto w-full"
-          />
-        </figure>
+        <Image
+          src="/interno-v2.jpg"
+          alt="Convite de aniversário de 15 anos de Maria Fernanda, com moldura de flores em aquarela, brasão MF, a data 06.11.2026 às 21h e um envelope aberto com um cartão florido"
+          width={1588}
+          height={2236}
+          priority
+          className="h-auto w-full"
+        />
+
+        <div className="flex w-full flex-col items-center gap-12 px-6">
+        <button type="button" onClick={() => setRsvpOpen(true)} className={primaryButtonClass}>
+          <CheckIcon />
+          Confirmar presença
+        </button>
+
+        <section className="flex w-full flex-col items-center gap-4">
+          <h2 className="text-xs tracking-[0.35em] text-ink uppercase">O evento</h2>
+
+          <div className="grid w-full grid-cols-2 gap-3">
+            <div className={cardClass}>
+              <span className={cardIconClass}>
+                <CalendarIcon />
+              </span>
+              <h3 className={cardTitleClass}>Data</h3>
+              <p className="text-lg font-semibold text-ink-deep">06 de novembro</p>
+              <p className="text-sm text-ink">sexta-feira · 2026</p>
+            </div>
+
+            <div className={cardClass}>
+              <span className={cardIconClass}>
+                <ClockIcon />
+              </span>
+              <h3 className={cardTitleClass}>Horário</h3>
+              <p className="text-lg font-semibold text-ink-deep">21h</p>
+              <p className="text-sm text-ink">a festa vai até tarde</p>
+            </div>
+
+            <div className={cardClass}>
+              <span className={cardIconClass}>
+                <LocationIcon />
+              </span>
+              <h3 className={cardTitleClass}>Local</h3>
+              <p className="text-lg font-semibold text-ink-deep">Chos Malal</p>
+              <p className="text-sm text-ink">Av. Archimedes Manhães, 1007</p>
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cardButtonClass}
+              >
+                Como chegar
+              </a>
+            </div>
+
+            <div className={cardClass}>
+              <span className={cardIconClass}>
+                <DressCodeIcon />
+              </span>
+              <h3 className={cardTitleClass}>Traje</h3>
+              <p className="text-lg font-semibold text-ink-deep">Traje social</p>
+              <button
+                type="button"
+                onClick={() => setDressCodeOpen(true)}
+                className={cardButtonClass}
+              >
+                Ver detalhes
+              </button>
+            </div>
+          </div>
+        </section>
 
         <section className="flex w-full flex-col items-center gap-5 text-center">
           <h2 className="text-xs tracking-[0.35em] text-ink uppercase">
             Contagem regressiva
           </h2>
           <Countdown />
-
-          <div className="mt-2 flex flex-wrap justify-center gap-6 sm:gap-8">
-            <CircleAction icon={<LocationIcon />} label="Como chegar" href={mapsHref} />
-            <CircleAction
-              icon={<CheckIcon />}
-              label="Confirmar presença"
-              onClick={() => setRsvpOpen(true)}
-            />
-            <CircleAction
-              icon={<DressCodeIcon />}
-              label="Trajes"
-              onClick={() => setDressCodeOpen(true)}
-            />
-          </div>
         </section>
 
-        <Sprig className="h-8 w-32 text-sage" />
-
-        <footer className="flex flex-col items-center gap-2 text-center">
+        <footer className="flex flex-col items-center gap-4 text-center">
+          <Image
+            src="/brasao.png"
+            alt="Brasão com as iniciais M e F"
+            width={254}
+            height={254}
+            className="h-auto w-24"
+          />
           <span className="font-script text-3xl text-rose-deep">
             Com carinho, Maria Fernanda
           </span>
         </footer>
+        </div>
       </motion.main>
 
       <RSVPModal open={rsvpOpen} onClose={() => setRsvpOpen(false)} />
