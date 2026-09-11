@@ -3,6 +3,9 @@
 import { useEffect, useRef } from "react";
 
 const TRACK_URI = "spotify:track:5lm18pjbwdth6ENVllxjfl";
+// How long before the preview ends the next player instance starts loading.
+const STANDBY_LEAD_MS = 6000;
+const END_TOLERANCE_MS = 150;
 
 type SpotifyPlaybackUpdate = {
   data: {
@@ -15,7 +18,7 @@ type SpotifyPlaybackUpdate = {
 
 type SpotifyEmbedController = {
   play: () => void;
-  destroy?: () => void;
+  destroy: () => void;
   addListener: (
     event: "ready" | "playback_update",
     callback: (payload: SpotifyPlaybackUpdate) => void,
@@ -30,6 +33,14 @@ type SpotifyIframeApi = {
   ) => void;
 };
 
+type Player = {
+  controller: SpotifyEmbedController | null;
+  ready: boolean;
+  wantsPlay: boolean;
+  lastPosition: number;
+  destroy: () => void;
+};
+
 declare global {
   interface Window {
     onSpotifyIframeApiReady?: (api: SpotifyIframeApi) => void;
@@ -39,21 +50,15 @@ declare global {
 }
 
 export default function MusicPlayer() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const controllerRef = useRef<SpotifyEmbedController | null>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const host = hostRef.current;
+    if (!host) return;
 
     let hasGesture = Boolean(window.__hadGesture);
-
-    // Browsers only allow audio after the visitor has interacted with the page,
-    // so every tap retries play() until Spotify reports the track is playing.
-    function handleGesture() {
-      hasGesture = true;
-      controllerRef.current?.play();
-    }
+    let current: Player | null = null;
+    let standby: Player | null = null;
 
     function listenForGesture() {
       window.addEventListener("pointerdown", handleGesture);
@@ -63,45 +68,109 @@ export default function MusicPlayer() {
       window.removeEventListener("pointerdown", handleGesture);
     }
 
-    listenForGesture();
+    function play(player: Player) {
+      player.wantsPlay = true;
+      if (player.ready) player.controller?.play();
+    }
 
-    function setup(api: SpotifyIframeApi) {
+    // Browsers only allow audio after the visitor has interacted with the page,
+    // so every tap retries play() until Spotify reports the track is playing.
+    function handleGesture() {
+      hasGesture = true;
+      if (current) play(current);
+    }
+
+    // The anonymous preview plays once per embed instance, so a fresh iframe is
+    // what brings it back. The page keeps its user activation, so the new
+    // instance may start on its own.
+    function createPlayer(api: SpotifyIframeApi): Player {
+      const target = document.createElement("div");
+      host!.appendChild(target);
+
+      const player: Player = {
+        controller: null,
+        ready: false,
+        wantsPlay: false,
+        lastPosition: 0,
+        destroy() {
+          player.controller?.destroy();
+          target.remove();
+        },
+      };
+
       api.createController(
-        container as HTMLElement,
+        target,
         { uri: TRACK_URI, width: "300", height: "152" },
         (controller) => {
-          controllerRef.current = controller;
+          player.controller = controller;
 
           controller.addListener("ready", () => {
-            if (hasGesture) controller.play();
+            player.ready = true;
+            if (player.wantsPlay) controller.play();
           });
 
-          controller.addListener("playback_update", (payload) => {
-            if (payload.data.isPaused) {
+          controller.addListener("playback_update", ({ data }) => {
+            if (player !== current) return;
+
+            const nearEnd = data.duration > 0 && data.position >= data.duration - END_TOLERANCE_MS;
+            const stoppedAtEnd =
+              data.isPaused && data.duration > 0 && player.lastPosition >= data.duration - 2000;
+
+            if (nearEnd || stoppedAtEnd) {
+              swapToStandby(api);
+              return;
+            }
+
+            if (data.isPaused) {
               listenForGesture();
-            } else {
-              stopListeningForGesture();
+              return;
+            }
+
+            stopListeningForGesture();
+            player.lastPosition = data.position;
+            if (!standby && data.duration > 0 && data.position >= data.duration - STANDBY_LEAD_MS) {
+              standby = createPlayer(api);
             }
           });
         },
       );
+
+      return player;
     }
 
+    function swapToStandby(api: SpotifyIframeApi) {
+      const finished = current;
+      current = standby ?? createPlayer(api);
+      standby = null;
+      finished?.destroy();
+      play(current);
+    }
+
+    function start(api: SpotifyIframeApi) {
+      current = createPlayer(api);
+      if (hasGesture) play(current);
+    }
+
+    listenForGesture();
+
     if (window.__spotifyIframeApi) {
-      setup(window.__spotifyIframeApi);
+      start(window.__spotifyIframeApi);
     } else {
-      window.onSpotifyIframeApiReady = setup;
+      window.onSpotifyIframeApiReady = start;
     }
 
     return () => {
       stopListeningForGesture();
-      controllerRef.current?.destroy?.();
+      current?.destroy();
+      standby?.destroy();
     };
   }, []);
 
   return (
-    <div aria-hidden style={{ width: 1, height: 1, overflow: "hidden", opacity: 0 }}>
-      <div ref={containerRef} />
-    </div>
+    <div
+      ref={hostRef}
+      aria-hidden
+      style={{ width: 1, height: 1, overflow: "hidden", opacity: 0 }}
+    />
   );
 }
