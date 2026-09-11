@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 
 const TRACK_URI = "spotify:track:5lm18pjbwdth6ENVllxjfl";
-const IFRAME_API_SRC = "https://open.spotify.com/embed/iframe-api/v1";
 
 type SpotifyPlaybackUpdate = {
   data: {
@@ -34,6 +33,8 @@ type SpotifyIframeApi = {
 declare global {
   interface Window {
     onSpotifyIframeApiReady?: (api: SpotifyIframeApi) => void;
+    __spotifyIframeApi?: SpotifyIframeApi;
+    __hadGesture?: boolean;
   }
 }
 
@@ -45,7 +46,7 @@ export default function MusicPlayer() {
     const container = containerRef.current;
     if (!container) return;
 
-    let hasGesture = false;
+    let hasGesture = Boolean(window.__hadGesture);
 
     // Browsers only allow audio after the visitor has interacted with the page,
     // so every tap retries play() until Spotify reports the track is playing.
@@ -64,18 +65,18 @@ export default function MusicPlayer() {
 
     listenForGesture();
 
-    window.onSpotifyIframeApiReady = (api) => {
+    function setup(api: SpotifyIframeApi) {
       api.createController(
-        container,
+        container as HTMLElement,
         { uri: TRACK_URI, width: "300", height: "152" },
-        (createdController) => {
-          controllerRef.current = createdController;
+        (controller) => {
+          controllerRef.current = controller;
 
-          createdController.addListener("ready", () => {
-            if (hasGesture) createdController.play();
+          controller.addListener("ready", () => {
+            if (hasGesture) controller.play();
           });
 
-          createdController.addListener("playback_update", (payload) => {
+          controller.addListener("playback_update", (payload) => {
             if (payload.data.isPaused) {
               listenForGesture();
             } else {
@@ -84,16 +85,12 @@ export default function MusicPlayer() {
           });
         },
       );
-    };
+    }
 
-    const existingScript = document.querySelector(
-      `script[src="${IFRAME_API_SRC}"]`,
-    );
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.src = IFRAME_API_SRC;
-      script.async = true;
-      document.body.appendChild(script);
+    if (window.__spotifyIframeApi) {
+      setup(window.__spotifyIframeApi);
+    } else {
+      window.onSpotifyIframeApiReady = setup;
     }
 
     return () => {

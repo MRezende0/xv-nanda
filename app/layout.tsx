@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Alex_Brush, Cormorant_Garamond } from "next/font/google";
+import Script from "next/script";
+import { preconnect } from "react-dom";
 import "./globals.css";
 
 const scriptFont = Alex_Brush({
@@ -15,6 +17,22 @@ const serifFont = Cormorant_Garamond({
   subsets: ["latin"],
 });
 
+// Hosts the Spotify embed hits on load and on first play (API, iframe, artwork, DRM handshake).
+const SPOTIFY_HOSTS = [
+  "https://open.spotify.com",
+  "https://embed-cdn.spotifycdn.com",
+  "https://image-cdn-fa.spotifycdn.com",
+  "https://apresolve.spotify.com",
+  "https://spclient.wg.spotify.com",
+];
+
+// Runs before hydration: keeps the Spotify API once it loads and remembers a tap
+// that happens before React attaches its own listeners.
+const spotifyBootstrap = `
+window.onSpotifyIframeApiReady = function (api) { window.__spotifyIframeApi = api; };
+window.addEventListener("pointerdown", function () { window.__hadGesture = true; }, { once: true, capture: true });
+`;
+
 export const metadata: Metadata = {
   title: "Maria Fernanda | XV Anos",
   description:
@@ -28,6 +46,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  SPOTIFY_HOSTS.forEach((host) => preconnect(host));
+
   return (
     <html
       lang="pt-BR"
@@ -35,6 +55,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-cream text-ink font-serif">
         {children}
+        <Script id="spotify-bootstrap" strategy="beforeInteractive">
+          {spotifyBootstrap}
+        </Script>
+        <Script
+          src="https://open.spotify.com/embed/iframe-api/v1"
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );
