@@ -16,8 +16,6 @@ type SpotifyPlaybackUpdate = {
 
 type SpotifyEmbedController = {
   play: () => void;
-  pause: () => void;
-  resume: () => void;
   destroy?: () => void;
   addListener: (
     event: "ready" | "playback_update",
@@ -42,32 +40,29 @@ declare global {
 export default function MusicPlayer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<SpotifyEmbedController | null>(null);
-  const hasStartedRef = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    let hasConfirmedPlay = false;
+    let hasGesture = false;
 
-    function startPlayback() {
-      const controller = controllerRef.current;
-      if (!controller || hasConfirmedPlay) return;
-      if (hasStartedRef.current) {
-        controller.resume();
-      } else {
-        hasStartedRef.current = true;
-        controller.play();
-      }
+    // Browsers only allow audio after the visitor has interacted with the page,
+    // so every tap retries play() until Spotify reports the track is playing.
+    function handleGesture() {
+      hasGesture = true;
+      controllerRef.current?.play();
     }
 
-    function removeGestureListeners() {
-      window.removeEventListener("pointerdown", startPlayback);
-      window.removeEventListener("touchstart", startPlayback);
+    function listenForGesture() {
+      window.addEventListener("pointerdown", handleGesture);
     }
 
-    window.addEventListener("pointerdown", startPlayback);
-    window.addEventListener("touchstart", startPlayback);
+    function stopListeningForGesture() {
+      window.removeEventListener("pointerdown", handleGesture);
+    }
+
+    listenForGesture();
 
     window.onSpotifyIframeApiReady = (api) => {
       api.createController(
@@ -76,12 +71,15 @@ export default function MusicPlayer() {
         (createdController) => {
           controllerRef.current = createdController;
 
-          createdController.addListener("ready", startPlayback);
+          createdController.addListener("ready", () => {
+            if (hasGesture) createdController.play();
+          });
 
           createdController.addListener("playback_update", (payload) => {
-            if (!payload.data.isPaused) {
-              hasConfirmedPlay = true;
-              removeGestureListeners();
+            if (payload.data.isPaused) {
+              listenForGesture();
+            } else {
+              stopListeningForGesture();
             }
           });
         },
@@ -99,7 +97,7 @@ export default function MusicPlayer() {
     }
 
     return () => {
-      removeGestureListeners();
+      stopListeningForGesture();
       controllerRef.current?.destroy?.();
     };
   }, []);
