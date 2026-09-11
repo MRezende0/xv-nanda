@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Countdown from "./Countdown";
 import DressCodeModal from "./DressCodeModal";
 import EnvelopeCover from "./EnvelopeCover";
+import MusicPlayer from "./MusicPlayer";
 import RSVPModal from "./RSVPModal";
 import {
   CalendarIcon,
@@ -148,6 +149,7 @@ export default function InviteExperience() {
           <span className="font-script text-3xl text-rose-deep">
             Com carinho, Maria Fernanda
           </span>
+          <MusicPlayer />
         </footer>
         </div>
       </motion.main>
