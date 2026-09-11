@@ -26,11 +26,9 @@ const SPOTIFY_HOSTS = [
   "https://spclient.wg.spotify.com",
 ];
 
-// Runs before hydration: keeps the Spotify API once it loads and remembers a tap
-// that happens before React attaches its own listeners.
+// Runs before hydration so the API is kept even if it loads before React mounts.
 const spotifyBootstrap = `
 window.onSpotifyIframeApiReady = function (api) { window.__spotifyIframeApi = api; };
-window.addEventListener("pointerdown", function () { window.__hadGesture = true; }, { once: true, capture: true });
 `;
 
 export const metadata: Metadata = {

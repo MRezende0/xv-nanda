@@ -6,6 +6,11 @@ const TRACK_URI = "spotify:track:5lm18pjbwdth6ENVllxjfl";
 // How long before the preview ends the next player instance starts loading.
 const STANDBY_LEAD_MS = 6000;
 const END_TOLERANCE_MS = 150;
+// A play() the browser blocks stays silent instead of reporting an error, and
+// Spotify still announces position 0 as if it were playing. Anything that has
+// not advanced by now was blocked, so go back to waiting for a tap.
+const PLAY_TIMEOUT_MS = 2500;
+const GESTURES = ["pointerdown", "touchstart", "click", "keydown"] as const;
 
 type SpotifyPlaybackUpdate = {
   data: {
@@ -45,7 +50,6 @@ declare global {
   interface Window {
     onSpotifyIframeApiReady?: (api: SpotifyIframeApi) => void;
     __spotifyIframeApi?: SpotifyIframeApi;
-    __hadGesture?: boolean;
   }
 }
 
@@ -56,27 +60,27 @@ export default function MusicPlayer() {
     const host = hostRef.current;
     if (!host) return;
 
-    let hasGesture = Boolean(window.__hadGesture);
     let current: Player | null = null;
     let standby: Player | null = null;
+    let playTimer: ReturnType<typeof setTimeout> | undefined;
 
     function listenForGesture() {
-      window.addEventListener("pointerdown", handleGesture);
+      GESTURES.forEach((event) => window.addEventListener(event, handleGesture));
     }
 
     function stopListeningForGesture() {
-      window.removeEventListener("pointerdown", handleGesture);
+      GESTURES.forEach((event) => window.removeEventListener(event, handleGesture));
     }
 
     function play(player: Player) {
       player.wantsPlay = true;
-      if (player.ready) player.controller?.play();
+      if (!player.ready) return;
+      player.controller?.play();
+      clearTimeout(playTimer);
+      playTimer = setTimeout(listenForGesture, PLAY_TIMEOUT_MS);
     }
 
-    // Browsers only allow audio after the visitor has interacted with the page,
-    // so every tap retries play() until Spotify reports the track is playing.
     function handleGesture() {
-      hasGesture = true;
       if (current) play(current);
     }
 
@@ -106,29 +110,31 @@ export default function MusicPlayer() {
 
           controller.addListener("ready", () => {
             player.ready = true;
-            if (player.wantsPlay) controller.play();
+            if (player.wantsPlay) play(player);
           });
 
           controller.addListener("playback_update", ({ data }) => {
             if (player !== current) return;
 
-            const nearEnd = data.duration > 0 && data.position >= data.duration - END_TOLERANCE_MS;
-            const stoppedAtEnd =
-              data.isPaused && data.duration > 0 && player.lastPosition >= data.duration - 2000;
+            const playing = !data.isPaused && data.duration > 0 && data.position > 0;
+            if (playing) {
+              clearTimeout(playTimer);
+              stopListeningForGesture();
+              player.lastPosition = data.position;
+            } else if (data.isPaused) {
+              listenForGesture();
+            }
 
-            if (nearEnd || stoppedAtEnd) {
+            if (data.duration <= 0) return;
+
+            const atEnd = data.position >= data.duration - END_TOLERANCE_MS;
+            const stoppedAtEnd = data.isPaused && player.lastPosition >= data.duration - 2000;
+            if (atEnd || stoppedAtEnd) {
               swapToStandby(api);
               return;
             }
 
-            if (data.isPaused) {
-              listenForGesture();
-              return;
-            }
-
-            stopListeningForGesture();
-            player.lastPosition = data.position;
-            if (!standby && data.duration > 0 && data.position >= data.duration - STANDBY_LEAD_MS) {
+            if (playing && !standby && data.duration - data.position <= STANDBY_LEAD_MS) {
               standby = createPlayer(api);
             }
           });
@@ -148,7 +154,7 @@ export default function MusicPlayer() {
 
     function start(api: SpotifyIframeApi) {
       current = createPlayer(api);
-      if (hasGesture) play(current);
+      play(current);
     }
 
     listenForGesture();
@@ -160,6 +166,7 @@ export default function MusicPlayer() {
     }
 
     return () => {
+      clearTimeout(playTimer);
       stopListeningForGesture();
       current?.destroy();
       standby?.destroy();
