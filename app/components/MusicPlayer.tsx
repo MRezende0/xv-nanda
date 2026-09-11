@@ -5,10 +5,6 @@ import { useEffect, useRef } from "react";
 const TRACK_URI = "spotify:track:5lm18pjbwdth6ENVllxjfl";
 // How long before the preview ends the next player instance starts loading.
 const STANDBY_LEAD_MS = 6000;
-// Position updates arrive about once a second, so the handoff is scheduled from
-// the last update before the end, minus the time a fresh instance takes to sound.
-const HANDOFF_WINDOW_MS = 1500;
-const START_LATENCY_MS = 300;
 const END_TOLERANCE_MS = 150;
 
 type SpotifyPlaybackUpdate = {
@@ -41,7 +37,6 @@ type Player = {
   controller: SpotifyEmbedController | null;
   ready: boolean;
   wantsPlay: boolean;
-  playing: boolean;
   lastPosition: number;
   destroy: () => void;
 };
@@ -64,7 +59,6 @@ export default function MusicPlayer() {
     let hasGesture = Boolean(window.__hadGesture);
     let current: Player | null = null;
     let standby: Player | null = null;
-    let handoffTimer: ReturnType<typeof setTimeout> | undefined;
 
     function listenForGesture() {
       window.addEventListener("pointerdown", handleGesture);
@@ -83,7 +77,7 @@ export default function MusicPlayer() {
     // so every tap retries play() until Spotify reports the track is playing.
     function handleGesture() {
       hasGesture = true;
-      if (current && !current.playing) play(current);
+      if (current) play(current);
     }
 
     // The anonymous preview plays once per embed instance, so a fresh iframe is
@@ -97,7 +91,6 @@ export default function MusicPlayer() {
         controller: null,
         ready: false,
         wantsPlay: false,
-        playing: false,
         lastPosition: 0,
         destroy() {
           player.controller?.destroy();
@@ -117,7 +110,6 @@ export default function MusicPlayer() {
           });
 
           controller.addListener("playback_update", ({ data }) => {
-            player.playing = !data.isPaused;
             if (player !== current) return;
 
             const nearEnd = data.duration > 0 && data.position >= data.duration - END_TOLERANCE_MS;
@@ -136,19 +128,8 @@ export default function MusicPlayer() {
 
             stopListeningForGesture();
             player.lastPosition = data.position;
-            if (data.duration <= 0) return;
-
-            const remaining = data.duration - data.position;
-            if (!standby && remaining <= STANDBY_LEAD_MS) {
+            if (!standby && data.duration > 0 && data.position >= data.duration - STANDBY_LEAD_MS) {
               standby = createPlayer(api);
-            }
-            if (standby && !standby.wantsPlay && remaining <= HANDOFF_WINDOW_MS) {
-              const next = standby;
-              clearTimeout(handoffTimer);
-              handoffTimer = setTimeout(
-                () => play(next),
-                Math.max(0, remaining - START_LATENCY_MS),
-              );
             }
           });
         },
@@ -158,12 +139,11 @@ export default function MusicPlayer() {
     }
 
     function swapToStandby(api: SpotifyIframeApi) {
-      clearTimeout(handoffTimer);
       const finished = current;
       current = standby ?? createPlayer(api);
       standby = null;
       finished?.destroy();
-      if (!current.wantsPlay) play(current);
+      play(current);
     }
 
     function start(api: SpotifyIframeApi) {
@@ -180,7 +160,6 @@ export default function MusicPlayer() {
     }
 
     return () => {
-      clearTimeout(handoffTimer);
       stopListeningForGesture();
       current?.destroy();
       standby?.destroy();
